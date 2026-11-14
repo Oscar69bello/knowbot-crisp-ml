@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Try the model{% endblock %}
+{% block content %}
+<h1>Try the model</h1>
+<p class="lead">Ask a question about the University of Cundinamarca documents. The model scores KnowBot's candidate fragments and shows the five it ranks first, next to KnowBot's current order.</p>
+{% if not ready %}<div class="warn">The model is still loading after a restart (about 10–30 seconds). Your first question may take longer.</div>{% endif %}
+
+<form method="post" action="{{ url_for('demo') }}" class="card">
+  <label for="question"><strong>Question</strong> (English or Spanish, up to 500 characters)</label>
+  <textarea id="question" name="question" rows="3" maxlength="500" required>{{ question }}</textarea>
+  <div class="examples"><span class="excerpt">Examples from the test set:</span><br>
+    {% for example in examples %}<button type="button" onclick="document.getElementById('question').value=this.textContent">{{ example }}</button>{% endfor %}
+  </div>
+  <p><button type="submit">Rank the fragments</button></p>
+</form>
+
+{% if error %}<div class="warn">{{ error }}</div>{% endif %}
+
+{% if result %}
+<p>{{ result.candidates }} candidate fragments scored by the {{ result.model.replace('_', ' ') }} model in {{ '%.0f'|format(result.latency_ms) }} ms.
+{% if result.top_probability < 0.3 %}<span class="badge bad">Low confidence ({{ result.top_probability }})</span>{% else %}<span class="badge good">Top probability {{ result.top_probability }}</span>{% endif %}</p>
+<div class="two">
+  <div>
+    <h2>Re-ranked by the model</h2>
+    {% for item in result.reranked %}
+    <div class="card"><strong>{{ item.rank }}. {{ item.document }}, page {{ item.page }}</strong> <span class="badge info">p = {{ item.probability }}</span><br>
+      <span class="excerpt">{{ item.excerpt }}…</span></div>
+    {% endfor %}
+  </div>
+  <div>
+    <h2>KnowBot's current order</h2>
+    {% for item in result.knowbot_order %}
+    <div class="card"><strong>{{ item.rank }}. {{ item.document }}, page {{ item.page }}</strong> <span class="badge info">cosine {{ item.cosine }}</span><br>
+      <span class="excerpt">{{ item.excerpt }}…</span></div>
+    {% endfor %}
+  </div>
+</div>
+<form method="post" action="{{ url_for('feedback') }}" class="card">
+  <input type="hidden" name="question" value="{{ result.question }}">
+  <strong>Was the first fragment of the model the right one?</strong>
+  <p><label><input type="radio" name="useful" value="yes" required> Yes</label> &nbsp; <label><input type="radio" name="useful" value="no"> No</label></p>
+  <input type="text" name="comment" maxlength="500" placeholder="Optional comment (which page should be first?)">
+  <p><button type="submit" class="secondary">Send feedback</button></p>
+</form>
+{% endif %}
+{% endblock %}
