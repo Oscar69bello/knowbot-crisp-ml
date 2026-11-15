@@ -133,4 +133,7 @@ class Corpus:
 
 @lru_cache(maxsize=1)
 def load_corpus():
+    import faiss
+
+    faiss.omp_set_num_threads(1)  # one thread: the search covers only 290 vectors
     return Corpus()

@@ -13,7 +13,12 @@ import threading
 import time
 from datetime import datetime, timezone
 
-import pandas as pd
+# One thread per numerical library. The free hosting instance has a 0.1 CPU quota but shows
+# the host's many cores; OpenMP and BLAS thread pools sized for those cores waste the quota.
+for _variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_variable, "1")
+
+import pandas as pd  # noqa: E402
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, url_for
 
 from knowbot import monitoring
