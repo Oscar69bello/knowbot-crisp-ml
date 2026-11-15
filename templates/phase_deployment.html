@@ -37,13 +37,21 @@ python app.py                     # open http://127.0.0.1:5000</pre>
 <p>In production the app runs with <code>gunicorn app:app</code>. The first request after a restart waits while the embedding model loads (about 10–30 seconds); the page shows a notice until then.</p>
 
 <h2>Hosting: why Render and not Streamlit</h2>
-<p>KnowBot itself is not moved: it remains deployed on <a href="https://udec-knowledge.streamlit.app/">Streamlit Community Cloud</a>, which hosts only Streamlit applications. The re-ranker is a separate Flask service, so it is deployed on Render, which runs any Python web service on its free plan and builds it directly from the GitHub repository through <code>render.yaml</code> (build command, <code>gunicorn</code> start command and <code>/health</code> check), so the deployment is versioned and reproducible.</p>
+<p>KnowBot itself is not moved: it remains deployed on <a href="https://udec-knowledge.streamlit.app/">Streamlit Community Cloud</a>, which hosts only Streamlit applications. The re-ranker is a separate Flask service, so it is deployed on Render, which runs Python web services on its free plan and builds them directly from the GitHub repository through <code>render.yaml</code> (build command, <code>gunicorn</code> start command and <code>/health</code> check), so the deployment is versioned and reproducible.</p>
 <div class="table-wrap"><table>
   <tr><th></th><th>KnowBot (chatbot)</th><th>Re-ranker (this project)</th></tr>
   <tr><td>Framework</td><td>Streamlit</td><td>Flask + gunicorn</td></tr>
-  <tr><td>Hosting</td><td>Streamlit Community Cloud</td><td>Render (free web service)</td></tr>
+  <tr><td>Hosting</td><td>Streamlit Community Cloud</td><td>Render (free web service: 512 MB RAM, 0.1 CPU)</td></tr>
   <tr><td>Purpose</td><td>Answer students' questions</td><td>Document the six phases and serve the model (demo and API)</td></tr>
 </table></div>
+<h3>Fitting in 512 MB of memory</h3>
+<p>Loaded as usual, the multilingual embedding model made the app use about 740 MB, above the 512 MB of the free instance. Two changes in <code>knowbot/embeddings.py</code> bring it to about 355 MB without changing any result:</p>
+<div class="table-wrap"><table>
+  <tr><th>Part</th><th>Problem</th><th>Change</th></tr>
+  <tr><td>Vocabulary table (250,002 &times; 384)</td><td>183 MB in float16, expanded by onnxruntime to float32</td><td>Moved out of the ONNX graph into a memory-mapped file; only the rows of the question's tokens are read</td></tr>
+  <tr><td>Tokenizer</td><td>About 250 MB with <code>tokenizer.json</code></td><td>The model's original SentencePiece file, a few MB, with the same token ids</td></tr>
+</table></div>
+<p>Both were checked against the standard model: identical token ids on 400 texts (the 100 questions, the 290 fragments and edge cases) and a maximum difference of 0.0 between the vectors of the 100 questions, so the features, the model and every reported metric are unchanged.</p>
 <p>Keeping the two services apart lets the model run in shadow mode without any risk to the chatbot students use. Limitations of the free plan: the service sleeps after about 15 minutes without traffic, so the first visit can take about a minute to wake it up, and the files in <code>logs/</code> are reset on every restart, so the monitoring shown in Phase 6 demonstrates the procedure rather than a long history.</p>
 
 <h2>User instructions</h2>
@@ -68,7 +76,7 @@ python app.py                     # open http://127.0.0.1:5000</pre>
   <li><strong>Prediction log:</strong> every prediction is written to <code>logs/predictions.csv</code> (time, source, question length, number of candidates, top probability, top document and page, agreement with KnowBot's order, latency, error). The prediction log stores the length of the question, not its text; the feedback form stores the question, because it is needed to label it.</li>
   <li><strong>Feedback:</strong> the yes/no answer and an optional comment go to <code>logs/feedback.csv</code>.</li>
   <li><strong>Incidents:</strong> errors are logged with the input length and shown on the monitoring page. Users report problems through the feedback comment or to the KnowBot team through the GitHub issues of the repository. An incident is reviewed within one week; a wrong deadline or requirement shown first is handled first.</li>
-  <li><strong>Health check:</strong> <code>/health</code> is checked by the hosting service and returns whether the model is loaded.</li>
+  <li><strong>Health check:</strong> <code>/health</code> returns whether the model is loaded and can be checked by the hosting service or an external monitor.</li>
 </ul>
 
 <div class="next"><a class="button secondary" href="{{ url_for('phase', slug='evaluation') }}">← 4. Model Evaluation</a><a class="button" href="{{ url_for('phase', slug='monitoring') }}">6. Monitoring and Maintenance →</a></div>

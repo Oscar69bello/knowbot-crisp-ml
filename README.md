@@ -42,7 +42,7 @@ crisp_ml/
 ├── app.py                      # Flask app: overview, six phases, demo, API, monitoring
 ├── knowbot/
 │   ├── retrieval.py            # FAISS index, BM25 and exact lookups (from KnowBot)
-│   ├── embeddings.py           # FastEmbed multilingual embeddings (from KnowBot)
+│   ├── embeddings.py           # FastEmbed multilingual embeddings (from KnowBot), slim mode for 512 MB
 │   ├── calendar_names.py       # Official names of the calendar activities (from KnowBot)
 │   ├── features.py             # Candidate generation and the 23 features (training and serving)
 │   ├── model.py                # Preprocessing pipeline, models, grid and ranking metrics
@@ -97,7 +97,14 @@ The response contains the five best fragments by the model (`reranked`) and by K
 
 ## Deployment
 
-`render.yaml` deploys the app on Render as a free web service: the build installs the dependencies and downloads the embedding model, and `gunicorn app:app` serves it. `/health` is the health check. Prediction and feedback logs are written to `logs/` (reset when the service restarts).
+`render.yaml` deploys the app on Render as a free web service (512 MB of RAM, 0.1 CPU): the build installs the dependencies and prepares the embedding model, and `gunicorn app:app` serves it. `/health` is the health check. Prediction and feedback logs are written to `logs/` (reset when the service restarts).
+
+**Fitting in 512 MB.** Loaded as usual, the multilingual embedding model makes the app use about 740 MB. `knowbot/embeddings.py` has a slim mode that brings it to about 355 MB with identical vectors:
+
+- the 250,002 x 384 vocabulary table (183 MB in float16, which onnxruntime expands to float32) is moved out of the ONNX graph into a memory-mapped file, and only the rows of each question's tokens are read;
+- the tokenizer runs on the model's original SentencePiece file instead of `tokenizer.json`, which takes about 250 MB in memory; the token ids are the same.
+
+Both changes were checked against the standard model: identical token ids on 400 texts and a maximum difference of 0.0 between the vectors of the 100 questions.
 
 ## Methodology summary
 
