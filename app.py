@@ -55,6 +55,8 @@ PHASES = [
 ]
 
 _model_ready = threading.Event()
+_warm_up_lock = threading.Lock()
+_warm_up_pid = None
 
 
 def _warm_up():
@@ -228,7 +230,21 @@ def health():
                     "time": datetime.now(timezone.utc).isoformat(timespec="seconds")})
 
 
-threading.Thread(target=_warm_up, daemon=True).start()
+@app.before_request
+def _start_warm_up():
+    """Start loading the model once in each serving process, at its first request.
+
+    gunicorn imports this module in its master process and then forks the worker. A thread
+    started at import would run in the master only (threads do not survive fork), so the
+    worker would never see the model loaded. Starting it here keeps it in the worker.
+    """
+    global _warm_up_pid
+    if _warm_up_pid == os.getpid():
+        return
+    with _warm_up_lock:
+        if _warm_up_pid != os.getpid():
+            _warm_up_pid = os.getpid()
+            threading.Thread(target=_warm_up, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.environ.get("PORT", 5000)), debug=False)
