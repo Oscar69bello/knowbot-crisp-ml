@@ -54,6 +54,7 @@ def rerank(question, top=5):
                 "cosine": round(float(row.cosine), 4),
                 "bm25": round(float(row.bm25), 3),
                 "excerpt": " ".join(row.text.split())[:320],
+                "text": " ".join(row.text.split()),
             }
             for rank, row in enumerate(rows.itertuples(), start=1)
         ]
@@ -62,6 +63,8 @@ def rerank(question, top=5):
         "question": question,
         "candidates": int(len(frame)),
         "reranked": describe(model_order),
+        # The written answer uses the ten fragments ranked first, as KnowBot sends up to ten.
+        "answer_fragments": describe(frame.sort_values("probability", ascending=False).head(10)),
         "knowbot_order": describe(baseline_order),
         "top_probability": round(float(model_order.probability.iloc[0]), 4),
         "latency_ms": round((time.perf_counter() - started) * 1000, 1),

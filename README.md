@@ -6,6 +6,7 @@
 
 A Machine Learning model that re-ranks the fragments retrieved by [KnowBot](https://udec-knowledge.streamlit.app/), the chatbot that answers questions about the official documents of the University of Cundinamarca. The whole project follows the six CRISP-ML phases and is documented in a Flask application that also serves the model.
 
+- **Application (six phases and model demo): <https://knowbot-reranker.onrender.com>**
 - KnowBot chatbot: <https://udec-knowledge.streamlit.app/>
 - KnowBot repository: <https://github.com/machinelearning-source/UdeC-knowledge>
 

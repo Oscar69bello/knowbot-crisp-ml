@@ -37,13 +37,31 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, sen
 from huggingface_hub import hf_hub_download  # noqa: E402, F401
 from langchain_community.vectorstores import FAISS  # noqa: E402, F401
 
-from knowbot import monitoring, predict  # noqa: E402, F401
+from knowbot import monitoring, predict, quick_questions  # noqa: E402, F401
+from knowbot.answer import write_answer  # noqa: E402
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 REPORTS = os.path.join(ROOT, "reports")
 DATA = os.path.join(ROOT, "data")
 
 app = Flask(__name__)
+
+
+@app.template_filter("simple_markdown")
+def simple_markdown(text):
+    """Bold, line breaks and list markers of a written answer, with everything else escaped."""
+    import html
+    import re
+
+    from markupsafe import Markup
+
+    lines = []
+    for line in html.escape(text or "").splitlines():
+        line = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", line)
+        line = re.sub(r"【(\d+)[^】]*】", r"[\1]", line)
+        line = re.sub(r"^\s*[-*•]\s+", "• ", line)
+        lines.append(line)
+    return Markup("<br>".join(lines))
 
 PHASES = [
     ("business", "1. Business and Data Understanding"),
@@ -165,10 +183,35 @@ def _experiments():
 def demo():
     result, error, question = None, None, ""
     if request.method == "POST":
-        question = request.form.get("question", "")
+        question = _quick_question(request.form) or request.form.get("question", "")
         result, error = _predict(question, source="demo")
+        if result:
+            result["answer"], result["answer_error"] = write_answer(result["question"], result["answer_fragments"])
     return render_template("demo.html", result=result, error=error, question=question,
-                           ready=_model_ready.is_set(), examples=_examples())
+                           ready=_model_ready.is_set(), examples=_examples(), quick=QUICK_MENUS)
+
+
+# The three menus of the KnowBot chatbot: choose an option, then confirm it.
+QUICK_MENUS = [
+    {"name": "category", "title": "Student categories", "choose": "Choose a student situation…",
+     "button": "Ask about this category", "options": quick_questions.STUDENT_CATEGORIES},
+    {"name": "course", "title": "Course homologation", "choose": "Choose a course…",
+     "button": "Ask about this course", "options": quick_questions.HOMOLOGATION_COURSES},
+    {"name": "calendar", "title": "Academic calendar", "choose": "Choose an activity…",
+     "button": "Ask about this date", "options": quick_questions.CALENDAR_ACTIVITIES},
+]
+QUICK_TEMPLATES = {"category": quick_questions.CATEGORY_QUESTION, "course": quick_questions.COURSE_QUESTION,
+                   "calendar": quick_questions.CALENDAR_QUESTION}
+
+
+def _quick_question(form):
+    """The question of a confirmed quick menu, or None when the question box was used."""
+    menu = form.get("quick")
+    option = form.get("option", "")
+    menus = {item["name"]: item for item in QUICK_MENUS}
+    if menu in menus and option in menus[menu]["options"]:
+        return QUICK_TEMPLATES[menu].format(option=option)
+    return None
 
 
 def _examples():
@@ -198,6 +241,7 @@ def api_rerank():
     result, error = _predict(payload.get("question", ""), source="api")
     if error:
         return jsonify({"error": error}), 400
+    result.pop("answer_fragments", None)
     return jsonify(result)
 
 

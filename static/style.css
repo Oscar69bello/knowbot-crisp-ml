@@ -64,3 +64,26 @@ button.secondary { background: #fff; color: var(--navy); }
 footer { text-align: center; color: var(--muted); font-size: 0.82rem; padding: 18px; }
 ul.tight li { margin: 3px 0; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } h1 { font-size: 1.4rem; } }
+.quick-menus { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: flex-start; }
+details.quick { border: 1.5px solid var(--blue); border-radius: 999px; background: #fff; }
+details.quick[open] { border-radius: 14px; padding-bottom: 10px; }
+details.quick summary { cursor: pointer; padding: 7px 16px; color: var(--navy); font-weight: 600; list-style: none; }
+details.quick summary::after { content: " ▾"; }
+details.quick[open] summary::after { content: " ▴"; }
+details.quick form { padding: 0 12px; display: grid; gap: 8px; min-width: 260px; max-width: 360px; }
+details.quick select { padding: 8px; border: 1.5px solid var(--blue); border-radius: 10px; font: inherit; max-width: 100%; }
+.side-toggle { position: fixed; left: 10px; top: 50%; z-index: 30; width: 34px; height: 44px; padding: 0; border-radius: 10px; font-size: 1.4rem; }
+.side-panel { position: fixed; top: 0; left: 0; bottom: 0; width: 290px; max-width: 85vw; background: var(--surface); border-right: 4px solid var(--accent); padding: 18px; overflow-y: auto; z-index: 40; transform: translateX(-105%); transition: transform 0.2s; box-shadow: 0 0 24px rgba(21, 51, 37, 0.2); }
+body.side-open .side-panel { transform: none; }
+.side-close { float: right; width: 34px; padding: 4px; background: #fff; color: var(--navy); }
+.side-brand { clear: both; background: linear-gradient(100deg, var(--navy-dark), var(--navy) 55%, var(--blue)); border-left: 5px solid var(--accent); border-radius: 12px; padding: 16px; color: #fff; margin: 10px 0 18px; }
+.side-brand strong { font-size: 1.3rem; } .side-brand span { color: var(--accent); }
+.side-brand small { display: block; color: var(--soft); letter-spacing: 0.2em; margin-top: 8px; font-size: 0.72rem; }
+.side-panel h3 { color: var(--navy); margin: 0 0 10px; }
+.side-action { display: block; width: 100%; text-align: center; margin: 0 0 10px; background: var(--navy); color: #fff; border: 2px solid var(--navy); border-radius: 10px; padding: 9px 12px; font-weight: 600; text-decoration: none; cursor: pointer; font-size: 0.95rem; }
+.side-action:hover { background: var(--blue); border-color: var(--accent); }
+.side-about summary { list-style: none; }
+.side-about p, .side-about ol { font-size: 0.86rem; color: var(--ink); }
+.card.answer { border-left: 5px solid var(--accent); }
+.card.answer h2 { margin-top: 0; border-left: none; padding-left: 0; }
+.answer-text { line-height: 1.6; }
