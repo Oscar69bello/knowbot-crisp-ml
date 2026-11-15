@@ -17,11 +17,24 @@ from datetime import datetime, timezone
 # the host's many cores; OpenMP and BLAS thread pools sized for those cores waste the quota.
 for _variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(_variable, "1")
+# The model runs in this process only; joblib's process pool and its semaphores are not needed.
+os.environ.setdefault("JOBLIB_MULTIPROCESSING", "0")
 
+# All heavy libraries are imported here, in the main thread, before the warm-up thread starts.
+# On the Linux host, importing joblib from the background thread blocked, so the model never
+# finished loading and every later use of joblib found it partially initialized.
+import faiss  # noqa: E402, F401
+import joblib  # noqa: E402, F401
+import onnxruntime  # noqa: E402, F401
 import pandas as pd  # noqa: E402
-from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, url_for
+import sentencepiece  # noqa: E402, F401
+import sklearn.ensemble  # noqa: E402, F401
+from fastembed import TextEmbedding  # noqa: E402, F401
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, url_for  # noqa: E402
+from huggingface_hub import hf_hub_download  # noqa: E402, F401
+from langchain_community.vectorstores import FAISS  # noqa: E402, F401
 
-from knowbot import monitoring
+from knowbot import monitoring, predict  # noqa: E402, F401
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 REPORTS = os.path.join(ROOT, "reports")
