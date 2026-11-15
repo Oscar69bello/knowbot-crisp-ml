@@ -58,7 +58,7 @@
 <h2>Feasibility, limitations and risks</h2>
 <div class="two">
   <div class="card"><h3>Technical feasibility</h3><p>All features are computed locally from the existing index: vector similarity, BM25 keyword scores and exact calendar and article matches. The models are scikit-learn classifiers that train in seconds on a laptop and need no GPU. The model only re-orders fragments, so it can be added to KnowBot without changing the documents, the index or the language model.</p></div>
-  <div class="card"><h3>Organizational feasibility</h3><p>The documents are public, the labels were written by the team, and no personal data is used. Domain review is available from teachers and the program coordination, and the team maintains the KnowBot repository.</p></div>
+  <div class="card"><h3>Organizational feasibility</h3><p>The documents are public, the labels were written by the team, and no personal data is used. The team knows the four documents, reviews the model's errors and maintains the KnowBot repository.</p></div>
 </div>
 <div class="warn"><strong>Limitations and risks.</strong> Small labeled set (risk of overfitting and of noisy model selection); labels mark one page even when a neighbouring page also answers; questions were written by the team, so real student questions may be phrased differently (distribution shift); when the documents change (a new calendar), features and labels must be rebuilt; a model that ranks a wrong page first with high confidence could make KnowBot cite the wrong rule.</div>
 

@@ -19,6 +19,9 @@ for _variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(_variable, "1")
 # The model runs in this process only; joblib's process pool and its semaphores are not needed.
 os.environ.setdefault("JOBLIB_MULTIPROCESSING", "0")
+# The embedding model and its tokenizer are downloaded during the build. At run time they are
+# read from that cache only: no request to the model hub, which could retry and wait for minutes.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 # All heavy libraries are imported here, in the main thread, before the warm-up thread starts.
 # On the Linux host, importing joblib from the background thread blocked, so the model never
@@ -56,11 +59,22 @@ _model_ready = threading.Event()
 
 def _warm_up():
     """Load the embedding model, the index and the re-ranker in the background after start-up."""
+    import faulthandler
+    import sys
+
+    # If loading takes more than 3 minutes, write where every thread is to the log.
+    faulthandler.dump_traceback_later(180, file=sys.stderr)
+    started = time.perf_counter()
     try:
         from knowbot.predict import rerank
 
         rerank("When does online registration take place in 2026?")
+        print(f"Model loaded in {time.perf_counter() - started:.1f} s", file=sys.stderr, flush=True)
+    except Exception as error:
+        print(f"Model loading failed: {error!r}", file=sys.stderr, flush=True)
+        raise
     finally:
+        faulthandler.cancel_dump_traceback_later()
         _model_ready.set()
 
 
@@ -113,7 +127,7 @@ def phase(slug):
         context["per_question"] = _csv(os.path.join(REPORTS, "test_per_question.csv")).to_dict("records")
         context["importance"] = _csv(os.path.join(REPORTS, "feature_importance.csv")).sort_values(
             "importance_mean", ascending=False).to_dict("records")
-        review_path = os.path.join(REPORTS, "domain_review.json")
+        review_path = os.path.join(REPORTS, "team_review.json")
         context["review"] = json.load(open(review_path, encoding="utf-8")) if os.path.exists(review_path) else None
     if slug == "monitoring":
         context["log"] = monitoring.read_log(limit=50)

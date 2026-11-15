@@ -2,7 +2,7 @@
 {% block title %}Model Evaluation{% endblock %}
 {% block content %}
 <h1>4. Model Evaluation</h1>
-<p class="lead">Metrics, cross-validation comparison, overfitting and risk analysis, domain review, model selection and the final result on the independent test set.</p>
+<p class="lead">Metrics, cross-validation comparison, overfitting and risk analysis, the team's assessment of the errors, model selection and the final result on the independent test set.</p>
 
 <h2>Metrics and why</h2>
 <div class="table-wrap"><table>
@@ -65,18 +65,15 @@
 <h3>What the model relies on</h3>
 <figure><img src="{{ url_for('report_file', name='feature_importance.png') }}" alt="Permutation importance of each feature"><figcaption>Permutation importance on the test set: how much average precision drops when one feature is shuffled. The page-level features dominate.</figcaption></figure>
 
-<h2>Review with a domain expert</h2>
+<h2>Assessment of the errors by the creator team</h2>
 {% if review %}
-<div class="card">
-  <p><strong>Reviewer:</strong> {{ review.reviewer }} ({{ review.role }}), {{ review.date }}</p>
-  <p><strong>What was reviewed:</strong> {{ review.scope }}</p>
-  <h3>Feedback</h3>
-  <ul class="tight">{% for item in review.feedback %}<li>{{ item }}</li>{% endfor %}</ul>
-  <h3>Actions taken</h3>
-  <ul class="tight">{% for item in review.actions %}<li>{{ item }}</li>{% endfor %}</ul>
-</div>
-{% else %}
-<div class="warn"><strong>Pending.</strong> The review session with a person who knows the regulations has not been recorded yet. Guide for the session: (1) for the 20 test questions, is the page ranked first by the model a valid answer even when it is not the labeled page? (2) which mistakes would mislead a student (a wrong deadline, a wrong requirement)? (3) are the 100 questions representative of what students ask? The feedback is stored in <code>reports/domain_review.json</code> and appears here.</div>
+<p>{{ review.reviewers }}, {{ review.date }}. {{ review.scope }}</p>
+<div class="table-wrap"><table>
+  <tr><th>Question</th><th>Model's first page</th><th>Judgment</th><th>Could mislead</th><th class="num">Rank of labeled page</th></tr>
+  {% for c in review.cases %}<tr><td>{{ c.question_id }}. {{ c.question }}</td><td>{{ c.model_first_page }}</td><td>{{ c.judgment }}</td><td>{{ c.could_mislead }}</td><td class="num">{{ c.rank_of_labeled_page }}</td></tr>{% endfor %}
+</table></div>
+<h3>Conclusions</h3>
+<ul class="tight">{% for item in review.conclusions %}<li>{{ item }}</li>{% endfor %}</ul>
 {% endif %}
 
 <div class="next"><a class="button secondary" href="{{ url_for('phase', slug='modeling') }}">← 3. Model Engineering</a><a class="button" href="{{ url_for('phase', slug='deployment') }}">5. Model Deployment →</a></div>
